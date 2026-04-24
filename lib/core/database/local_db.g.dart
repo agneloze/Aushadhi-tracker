@@ -312,7 +312,8 @@ class MedicinesCompanion extends UpdateCompanion<Medicine> {
   }
 }
 
-class $BatchesTable extends Batches with TableInfo<$BatchesTable, Batche> {
+class $BatchesTable extends Batches
+    with TableInfo<$BatchesTable, MedicineBatch> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -381,7 +382,7 @@ class $BatchesTable extends Batches with TableInfo<$BatchesTable, Batche> {
   String get actualTableName => $name;
   static const String $name = 'batches';
   @override
-  VerificationContext validateIntegrity(Insertable<Batche> instance,
+  VerificationContext validateIntegrity(Insertable<MedicineBatch> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -430,9 +431,9 @@ class $BatchesTable extends Batches with TableInfo<$BatchesTable, Batche> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Batche map(Map<String, dynamic> data, {String? tablePrefix}) {
+  MedicineBatch map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Batche(
+    return MedicineBatch(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       medicineId: attachedDatabase.typeMapping
@@ -456,7 +457,7 @@ class $BatchesTable extends Batches with TableInfo<$BatchesTable, Batche> {
   }
 }
 
-class Batche extends DataClass implements Insertable<Batche> {
+class MedicineBatch extends DataClass implements Insertable<MedicineBatch> {
   final String id;
   final String medicineId;
   final String batchNumber;
@@ -464,7 +465,7 @@ class Batche extends DataClass implements Insertable<Batche> {
   final int quantity;
   final DateTime createdAt;
   final DateTime updatedAt;
-  const Batche(
+  const MedicineBatch(
       {required this.id,
       required this.medicineId,
       required this.batchNumber,
@@ -497,10 +498,10 @@ class Batche extends DataClass implements Insertable<Batche> {
     );
   }
 
-  factory Batche.fromJson(Map<String, dynamic> json,
+  factory MedicineBatch.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Batche(
+    return MedicineBatch(
       id: serializer.fromJson<String>(json['id']),
       medicineId: serializer.fromJson<String>(json['medicineId']),
       batchNumber: serializer.fromJson<String>(json['batchNumber']),
@@ -524,7 +525,7 @@ class Batche extends DataClass implements Insertable<Batche> {
     };
   }
 
-  Batche copyWith(
+  MedicineBatch copyWith(
           {String? id,
           String? medicineId,
           String? batchNumber,
@@ -532,7 +533,7 @@ class Batche extends DataClass implements Insertable<Batche> {
           int? quantity,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
-      Batche(
+      MedicineBatch(
         id: id ?? this.id,
         medicineId: medicineId ?? this.medicineId,
         batchNumber: batchNumber ?? this.batchNumber,
@@ -541,8 +542,8 @@ class Batche extends DataClass implements Insertable<Batche> {
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
-  Batche copyWithCompanion(BatchesCompanion data) {
-    return Batche(
+  MedicineBatch copyWithCompanion(BatchesCompanion data) {
+    return MedicineBatch(
       id: data.id.present ? data.id.value : this.id,
       medicineId:
           data.medicineId.present ? data.medicineId.value : this.medicineId,
@@ -558,7 +559,7 @@ class Batche extends DataClass implements Insertable<Batche> {
 
   @override
   String toString() {
-    return (StringBuffer('Batche(')
+    return (StringBuffer('MedicineBatch(')
           ..write('id: $id, ')
           ..write('medicineId: $medicineId, ')
           ..write('batchNumber: $batchNumber, ')
@@ -576,7 +577,7 @@ class Batche extends DataClass implements Insertable<Batche> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Batche &&
+      (other is MedicineBatch &&
           other.id == this.id &&
           other.medicineId == this.medicineId &&
           other.batchNumber == this.batchNumber &&
@@ -586,7 +587,7 @@ class Batche extends DataClass implements Insertable<Batche> {
           other.updatedAt == this.updatedAt);
 }
 
-class BatchesCompanion extends UpdateCompanion<Batche> {
+class BatchesCompanion extends UpdateCompanion<MedicineBatch> {
   final Value<String> id;
   final Value<String> medicineId;
   final Value<String> batchNumber;
@@ -617,7 +618,7 @@ class BatchesCompanion extends UpdateCompanion<Batche> {
   })  : medicineId = Value(medicineId),
         batchNumber = Value(batchNumber),
         expiryDate = Value(expiryDate);
-  static Insertable<Batche> custom({
+  static Insertable<MedicineBatch> custom({
     Expression<String>? id,
     Expression<String>? medicineId,
     Expression<String>? batchNumber,
@@ -739,11 +740,11 @@ final class $$MedicinesTableReferences
     extends BaseReferences<_$AppDatabase, $MedicinesTable, Medicine> {
   $$MedicinesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$BatchesTable, List<Batche>> _batchesRefsTable(
-          _$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(db.batches,
-          aliasName:
-              $_aliasNameGenerator(db.medicines.id, db.batches.medicineId));
+  static MultiTypedResultKey<$BatchesTable, List<MedicineBatch>>
+      _batchesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.batches,
+              aliasName:
+                  $_aliasNameGenerator(db.medicines.id, db.batches.medicineId));
 
   $$BatchesTableProcessedTableManager get batchesRefs {
     final manager = $$BatchesTableTableManager($_db, $_db.batches)
@@ -992,7 +993,7 @@ typedef $$BatchesTableUpdateCompanionBuilder = BatchesCompanion Function({
 });
 
 final class $$BatchesTableReferences
-    extends BaseReferences<_$AppDatabase, $BatchesTable, Batche> {
+    extends BaseReferences<_$AppDatabase, $BatchesTable, MedicineBatch> {
   $$BatchesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $MedicinesTable _medicineIdTable(_$AppDatabase db) =>
@@ -1156,14 +1157,14 @@ class $$BatchesTableAnnotationComposer
 class $$BatchesTableTableManager extends RootTableManager<
     _$AppDatabase,
     $BatchesTable,
-    Batche,
+    MedicineBatch,
     $$BatchesTableFilterComposer,
     $$BatchesTableOrderingComposer,
     $$BatchesTableAnnotationComposer,
     $$BatchesTableCreateCompanionBuilder,
     $$BatchesTableUpdateCompanionBuilder,
-    (Batche, $$BatchesTableReferences),
-    Batche,
+    (MedicineBatch, $$BatchesTableReferences),
+    MedicineBatch,
     PrefetchHooks Function({bool medicineId})> {
   $$BatchesTableTableManager(_$AppDatabase db, $BatchesTable table)
       : super(TableManagerState(
@@ -1260,14 +1261,14 @@ class $$BatchesTableTableManager extends RootTableManager<
 typedef $$BatchesTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
     $BatchesTable,
-    Batche,
+    MedicineBatch,
     $$BatchesTableFilterComposer,
     $$BatchesTableOrderingComposer,
     $$BatchesTableAnnotationComposer,
     $$BatchesTableCreateCompanionBuilder,
     $$BatchesTableUpdateCompanionBuilder,
-    (Batche, $$BatchesTableReferences),
-    Batche,
+    (MedicineBatch, $$BatchesTableReferences),
+    MedicineBatch,
     PrefetchHooks Function({bool medicineId})>;
 
 class $AppDatabaseManager {

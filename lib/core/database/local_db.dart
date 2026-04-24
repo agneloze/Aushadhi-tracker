@@ -15,6 +15,7 @@ class Medicines extends Table {
 }
 
 // Batches Table (Expiry tracking)
+@DataClassName('MedicineBatch')
 class Batches extends Table {
   TextColumn get id => text().clientDefault(() => DateTime.now().millisecondsSinceEpoch.toString())();
   TextColumn get medicineId => text().references(Medicines, #id)();
@@ -36,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
   int get schemaVersion => 1;
 
   // FIFO Query: Get batches for a medicine sorted by expiry date
-  Future<List<Batch>> getBatchesForMedicine(String medicineId) {
+  Future<List<MedicineBatch>> getBatchesForMedicine(String medicineId) {
     return (select(batches)
           ..where((t) => t.medicineId.equals(medicineId))
           ..orderBy([(t) => OrderingTerm(expression: t.expiryDate, mode: OrderingMode.asc)]))
@@ -44,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get all upcoming expiries (within 90 days)
-  Future<List<Batch>> getUpcomingExpiries() {
+  Future<List<MedicineBatch>> getUpcomingExpiries() {
     final threshold = DateTime.now().add(const Duration(days: 90));
     return (select(batches)
           ..where((t) => t.expiryDate.isSmallerOrEqualValue(threshold))

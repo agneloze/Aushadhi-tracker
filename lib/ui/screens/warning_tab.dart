@@ -15,7 +15,7 @@ class WarningTab extends StatefulWidget {
 }
 
 class _WarningTabState extends State<WarningTab> {
-  late Future<List<Batch>> _upcomingExpiriesFuture;
+  late Future<List<MedicineBatch>> _upcomingExpiriesFuture;
 
   @override
   void initState() {
@@ -36,7 +36,7 @@ class _WarningTabState extends State<WarningTab> {
         title: const Text('FIFO ALERTS (चेतावनी)'),
         backgroundColor: AppTheme.primaryOrange,
       ),
-      body: FutureBuilder<List<Batch>>(
+      body: FutureBuilder<List<MedicineBatch>>(
         future: _upcomingExpiriesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

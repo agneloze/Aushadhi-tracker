@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 
 class ReportsService {
   // Generate and Share CSV
-  Future<void> generateAndShareCSV(List<Batch> batches) async {
+  Future<void> generateAndShareCSV(List<MedicineBatch> batches) async {
     List<List<dynamic>> rows = [];
     
     // Headers
@@ -42,7 +42,7 @@ class ReportsService {
   }
 
   // Generate and Share PDF
-  Future<void> generateAndSharePDF(List<Batch> batches) async {
+  Future<void> generateAndSharePDF(List<MedicineBatch> batches) async {
     final pdf = pw.Document();
 
     pdf.addPage(
