@@ -22,11 +22,13 @@ subprojects {
         ])
     }
     
-    // Fix for AGP 8.0+ namespace issue
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            if (project.android.namespace == null) {
-                project.android.namespace = project.group
+    // Fix for AGP 8.0+ namespace issue safely without evaluation crash
+    if (!project.state.executed) {
+        project.afterEvaluate {
+            if (project.hasProperty('android')) {
+                if (project.android.namespace == null) {
+                    project.android.namespace = project.group
+                }
             }
         }
     }
