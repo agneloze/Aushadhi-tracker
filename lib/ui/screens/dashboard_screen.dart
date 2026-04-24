@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:aushadhi_tracker/ui/theme/app_theme.dart';
 import 'package:aushadhi_tracker/ui/screens/scan_screen.dart';
 import 'package:aushadhi_tracker/ui/screens/warning_tab.dart';
+import 'package:aushadhi_tracker/services/reports_service.dart';
+import 'package:aushadhi_tracker/main.dart'; // To access the global db instance
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -67,7 +69,10 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final batches = await db.getUpcomingExpiries(); // Fetch data
+                      await ReportsService().generateAndSharePDF(batches);
+                    },
                     icon: const Icon(Icons.picture_as_pdf),
                     label: const Text('PDF'),
                     style: OutlinedButton.styleFrom(
@@ -79,7 +84,10 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: () async {
+                      final batches = await db.getUpcomingExpiries(); // Fetch data
+                      await ReportsService().generateAndShareCSV(batches);
+                    },
                     icon: const Icon(Icons.table_chart),
                     label: const Text('CSV'),
                     style: OutlinedButton.styleFrom(
