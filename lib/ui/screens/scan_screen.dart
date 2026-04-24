@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:aushadhi_tracker/services/scanner_service.dart';
 import 'package:aushadhi_tracker/ui/theme/app_theme.dart';
 import 'package:intl/intl.dart';
@@ -41,60 +42,150 @@ class _ScanScreenState extends State<ScanScreen> {
       final DateTime? expiryDate = await _scannerService.processImage(image.path);
 
       if (mounted) {
-        _showResultDialog(expiryDate);
+        if (expiryDate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No date found. Please re-scan with clearer focus.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        } else {
+          _showResultDialog(expiryDate);
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error scanning: $e')),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
-  void _showResultDialog(DateTime? date) {
+  void _showResultDialog(DateTime date) {
+    // Unfocus any active field BEFORE showing dialog — prevents IME loop
+    FocusScope.of(context).unfocus();
+
     final TextEditingController dateController = TextEditingController(
-      text: date != null ? DateFormat('dd/MM/yyyy').format(date) : '',
+      text: DateFormat('dd/MM/yyyy').format(date),
     );
+    final TextEditingController batchController = TextEditingController();
+    bool isSaving = false;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        title: const Text('CONFIRM EXPIRY (पुष्टि करें)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Scanned Date:', style: TextStyle(fontSize: 12)),
-            TextField(
-              controller: dateController,
-              decoration: const InputDecoration(
-                hintText: 'DD/MM/YYYY',
-                border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          title: const Text('CONFIRM DETAILS (पुष्टि करें)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Batch / Medicine Name:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              TextField(
+                controller: batchController,
+                autofocus: false, // ← Prevents IME loop
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Paracetamol 500mg',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
               ),
-              keyboardType: TextInputType.datetime,
+              const SizedBox(height: 12),
+              const Text('Expiry Date (एक्सपायरी डेट):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              TextField(
+                controller: dateController,
+                autofocus: false, // ← Prevents IME loop
+                decoration: const InputDecoration(
+                  hintText: 'DD/MM/YYYY',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                keyboardType: TextInputType.datetime,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Verify both fields before saving.',
+                style: TextStyle(color: Colors.red, fontSize: 11),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                FocusScope.of(dialogContext).unfocus(); // clean up before pop
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('RE-SCAN', style: TextStyle(color: Colors.grey)),
             ),
-            const SizedBox(height: 12),
-            const Text('Please verify the date before saving.', style: TextStyle(color: Colors.red, fontSize: 11)),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      FocusScope.of(dialogContext).unfocus();
+                      final batchName = batchController.text.trim();
+                      final dateText = dateController.text.trim();
+
+                      if (batchName.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter batch/medicine name.')),
+                        );
+                        return;
+                      }
+
+                      // Parse date back from the (possibly edited) text field
+                      DateTime? finalDate;
+                      try {
+                        finalDate = DateFormat('dd/MM/yyyy').parse(dateText);
+                      } catch (_) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Invalid date format. Use DD/MM/YYYY.')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSaving = true);
+
+                      try {
+                        await Supabase.instance.client.from('stock_batches').insert({
+                          'batch_name': batchName,
+                          'expiry_date': finalDate.toIso8601String(),
+                          'scanned_at': DateTime.now().toIso8601String(),
+                        });
+
+                        if (mounted) {
+                          Navigator.pop(dialogContext);
+                          Navigator.pop(context); // back to dashboard
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('✓ $batchName saved!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('SAVE STOCK'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('RE-SCAN', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Logic to save to Drift database will go here
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('SAVE STOCK'),
-          ),
-        ],
       ),
     );
   }
@@ -117,14 +208,25 @@ class _ScanScreenState extends State<ScanScreen> {
       body: Stack(
         children: [
           CameraPreview(_controller!),
-          
+
           // Viewfinder Overlay
           Center(
             child: Container(
-              width: 250,
-              height: 150,
+              width: 280,
+              height: 160,
               decoration: BoxDecoration(
                 border: Border.all(color: AppTheme.primaryOrange, width: 2),
+                borderRadius: BorderRadius.zero,
+              ),
+              child: const Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Text(
+                    'EXP DATE ZONE',
+                    style: TextStyle(color: AppTheme.primaryOrange, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
             ),
           ),
@@ -151,9 +253,12 @@ class _ScanScreenState extends State<ScanScreen> {
         onPressed: _takePictureAndProcess,
         backgroundColor: AppTheme.primaryOrange,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        label: _isProcessing 
-          ? const CircularProgressIndicator(color: Colors.white) 
-          : const Text('CAPTURE & SCAN (स्कैन करें)'),
+        label: _isProcessing
+            ? const SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : const Text('CAPTURE & SCAN (स्कैन करें)'),
       ),
     );
   }
