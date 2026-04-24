@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aushadhi_tracker/ui/theme/app_theme.dart';
 import 'package:aushadhi_tracker/ui/screens/scan_screen.dart';
+import 'package:aushadhi_tracker/ui/screens/warning_tab.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -48,7 +49,10 @@ class DashboardScreen extends StatelessWidget {
             
             ElevatedButton.icon(
               onPressed: () {
-                // Navigate to Warning Tab
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const WarningTab()),
+                );
               },
               icon: const Icon(Icons.warning_amber_rounded),
               label: const Text('FIFO ALERTS (एफ.आई.एफ.ओ. अलर्ट)'),
