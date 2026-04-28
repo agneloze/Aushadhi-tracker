@@ -16,9 +16,9 @@ class AppTheme {
       fontFamily: 'Roboto', // Default basic font
       
       // Sharp corners on all components
-      cardTheme: CardTheme(
+      cardTheme: const CardTheme(
         elevation: 1,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         color: backgroundWhite,
       ),
       

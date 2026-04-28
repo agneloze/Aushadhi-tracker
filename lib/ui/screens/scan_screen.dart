@@ -80,8 +80,11 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   void _showResultDialog(DateTime date) {
+    // Capture screen context to avoid shadowing issues in nested builders
+    final screenContext = context;
+    
     // Unfocus any active field BEFORE showing dialog — prevents IME loop
-    FocusScope.of(context).unfocus();
+    FocusScope.of(screenContext).unfocus();
 
     final TextEditingController dateController = TextEditingController(
       text: DateFormat('dd/MM/yyyy').format(date),
@@ -91,7 +94,7 @@ class _ScanScreenState extends State<ScanScreen> {
     bool isSaving = false;
 
     showDialog(
-      context: context,
+      context: screenContext,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -193,7 +196,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       final dateText = dateController.text.trim();
 
                       if (batchName.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(screenContext).showSnackBar(
                           const SnackBar(content: Text('Please select or enter medicine name.')),
                         );
                         return;
@@ -204,7 +207,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       try {
                         finalDate = DateFormat('dd/MM/yyyy').parse(dateText);
                       } catch (_) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(screenContext).showSnackBar(
                           const SnackBar(content: Text('Invalid date format. Use DD/MM/YYYY.')),
                         );
                         return;
@@ -223,8 +226,8 @@ class _ScanScreenState extends State<ScanScreen> {
 
                         if (mounted) {
                           Navigator.pop(dialogContext);
-                          Navigator.pop(context); // back to dashboard
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          Navigator.pop(screenContext); // back to dashboard
+                          ScaffoldMessenger.of(screenContext).showSnackBar(
                             SnackBar(
                               content: Text('✓ $batchName saved!'),
                               backgroundColor: Colors.green,
@@ -233,7 +236,7 @@ class _ScanScreenState extends State<ScanScreen> {
                         }
                       } catch (e) {
                         setDialogState(() => isSaving = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(screenContext).showSnackBar(
                           SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),
                         );
                       }
