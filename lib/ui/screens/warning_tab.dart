@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:aushadhi_tracker/core/database/local_db.dart';
 import 'package:aushadhi_tracker/ui/theme/app_theme.dart';
 import 'package:intl/intl.dart';
-
-// Create a global instance for the UI to use (simple service locator pattern)
-// Note: In a production app with Riverpod/Bloc, this would be injected.
-late AppDatabase db;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class WarningTab extends StatefulWidget {
   const WarningTab({super.key});
@@ -15,7 +11,7 @@ class WarningTab extends StatefulWidget {
 }
 
 class _WarningTabState extends State<WarningTab> {
-  late Future<List<MedicineBatch>> _upcomingExpiriesFuture;
+  late Future<List<Map<String, dynamic>>> _upcomingExpiriesFuture;
 
   @override
   void initState() {
@@ -25,8 +21,21 @@ class _WarningTabState extends State<WarningTab> {
 
   void _refreshData() {
     setState(() {
-      _upcomingExpiriesFuture = db.getUpcomingExpiries();
+      _upcomingExpiriesFuture = _fetchUpcomingExpiries();
     });
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchUpcomingExpiries() async {
+    final now = DateTime.now();
+    final threeMonthsFromNow = now.add(const Duration(days: 90));
+
+    final response = await Supabase.instance.client
+        .from('stock_batches')
+        .select()
+        .lte('expiry_date', threeMonthsFromNow.toIso8601String())
+        .order('expiry_date', ascending: true);
+        
+    return List<Map<String, dynamic>>.from(response);
   }
 
   @override
@@ -36,7 +45,7 @@ class _WarningTabState extends State<WarningTab> {
         title: const Text('FIFO ALERTS (चेतावनी)'),
         backgroundColor: AppTheme.primaryOrange,
       ),
-      body: FutureBuilder<List<MedicineBatch>>(
+      body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _upcomingExpiriesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -64,7 +73,8 @@ class _WarningTabState extends State<WarningTab> {
             itemCount: batches.length,
             itemBuilder: (context, index) {
               final batch = batches[index];
-              final daysLeft = batch.expiryDate.difference(DateTime.now()).inDays;
+              final expiryDate = batch['expiry_date'] != null ? DateTime.parse(batch['expiry_date']) : DateTime.now();
+              final daysLeft = expiryDate.difference(DateTime.now()).inDays;
               
               // Color coding based on urgency
               Color cardColor = Colors.white;
@@ -88,15 +98,15 @@ class _WarningTabState extends State<WarningTab> {
                   contentPadding: const EdgeInsets.all(16),
                   leading: const Icon(Icons.warning_rounded, color: AppTheme.primaryOrange, size: 36),
                   title: Text(
-                    'Batch: ${batch.batchNumber}',
+                    'Batch: ${batch['batch_name'] ?? 'Unknown'}',
                     style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 8),
-                      Text('Expires: ${DateFormat('dd MMM yyyy').format(batch.expiryDate)}'),
-                      Text('Quantity: ${batch.quantity} units'),
+                      Text('Expires: ${DateFormat('dd MMM yyyy').format(expiryDate)}'),
+                      Text('Drug Code: ${batch['drug_code'] ?? 'N/A'}'),
                     ],
                   ),
                   trailing: Text(
