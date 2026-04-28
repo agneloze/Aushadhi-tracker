@@ -1,77 +1,50 @@
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'dart:io';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:intl/intl.dart';
+import 'package:aushadhi_tracker/config/app_secrets.dart';
 
 class ScannerService {
-  final TextRecognizer _textRecognizer = TextRecognizer();
-
-  // Primary regex patterns for expiry dates
-  final RegExp _datePattern = RegExp(
-    r'(\d{1,2})[\/\-\. ](\d{1,2})[\/\-\. ](\d{2,4})|(\d{1,2})[\/\-\. ](\d{2,4})',
-    caseSensitive: false,
-  );
-
   Future<DateTime?> processImage(String imagePath) async {
-    final InputImage inputImage = InputImage.fromFilePath(imagePath);
-    final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-2.0-flash',
+        apiKey: AppSecrets.geminiApiKey,
+      );
 
-    DateTime? bestMatch;
+      final imageBytes = await File(imagePath).readAsBytes();
+      final prompt = TextPart(
+          'Analyze this image of a medicine pack. Find the expiry date. '
+          'Return ONLY the date in the format DD/MM/YYYY. '
+          'If you only find the month and year, return the last day of that month (e.g. 10/2025 -> 31/10/2025). '
+          'If no date is found, return the word NONE.');
 
-    for (TextBlock block in recognizedText.blocks) {
-      for (TextLine line in block.lines) {
-        final String text = line.text.toUpperCase();
-        
-        // Check for keywords like "EXP", "EXPIRY", "VALID"
-        if (text.contains('EXP') || text.contains('VAL')) {
-          final match = _datePattern.firstMatch(text);
-          if (match != null) {
-            final dateStr = match.group(0)!;
-            final parsedDate = _parseDate(dateStr);
-            if (parsedDate != null) return parsedDate;
-          }
-        }
+      final imagePart = DataPart('image/jpeg', imageBytes);
+
+      final response = await model.generateContent([
+        Content.multi([prompt, imagePart])
+      ]);
+
+      final result = response.text?.trim() ?? 'NONE';
+      
+      if (result == 'NONE') {
+        return null;
       }
-    }
 
-    // Fallback: If no keywords found, return the first valid date-like string
-    for (TextBlock block in recognizedText.blocks) {
-      for (TextLine line in block.lines) {
-        final match = _datePattern.firstMatch(line.text);
-        if (match != null) {
-          final date = _parseDate(match.group(0)!);
-          if (date != null) return date;
-        }
-      }
+      return _parseDate(result);
+    } catch (e) {
+      throw Exception('Gemini OCR failed: $e');
     }
-
-    return null;
   }
 
   DateTime? _parseDate(String dateStr) {
-    // Clean the string
-    final cleanStr = dateStr.replaceAll(RegExp(r'[ \-\.]'), '/');
-    
-    // Try various formats
-    final formats = [
-      'dd/MM/yyyy',
-      'MM/yyyy',
-      'dd/MM/yy',
-      'MM/yy',
-    ];
-
-    for (var format in formats) {
-      try {
-        final date = DateFormat(format).parse(cleanStr);
-        // If it's just MM/YYYY, set to last day of month
-        if (format == 'MM/yyyy' || format == 'MM/yy') {
-          return DateTime(date.year, date.month + 1, 0);
-        }
-        return date;
-      } catch (_) {}
+    try {
+      return DateFormat('dd/MM/yyyy').parseStrict(dateStr);
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   void dispose() {
-    _textRecognizer.close();
+    // No specific resources to close for generative AI in this context
   }
 }
