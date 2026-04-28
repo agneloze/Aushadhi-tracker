@@ -4,28 +4,29 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:aushadhi_tracker/core/database/local_db.dart';
 import 'package:intl/intl.dart';
 
 class ReportsService {
   // Generate and Share CSV
-  Future<void> generateAndShareCSV(List<MedicineBatch> batches) async {
+  Future<void> generateAndShareCSV(List<Map<String, dynamic>> batches) async {
     List<List<dynamic>> rows = [];
     
     // Headers
-    rows.add(["Batch Number", "Medicine ID", "Expiry Date", "Quantity", "Status"]);
+    rows.add(["Batch Name", "Drug Code", "Expiry Date", "Scanned At", "Status"]);
 
     // Data Rows
     for (var batch in batches) {
-      final daysLeft = batch.expiryDate.difference(DateTime.now()).inDays;
+      final expiryDate = batch['expiry_date'] != null ? DateTime.parse(batch['expiry_date']) : DateTime.now();
+      final scannedAt = batch['scanned_at'] != null ? DateTime.parse(batch['scanned_at']) : DateTime.now();
+      final daysLeft = expiryDate.difference(DateTime.now()).inDays;
       String status = daysLeft <= 90 ? 'Expiring Soon' : 'Safe';
       if (daysLeft < 0) status = 'EXPIRED';
 
       rows.add([
-        batch.batchNumber,
-        batch.medicineId,
-        DateFormat('yyyy-MM-dd').format(batch.expiryDate),
-        batch.quantity,
+        batch['batch_name'] ?? 'N/A',
+        batch['drug_code'] ?? 'N/A',
+        DateFormat('yyyy-MM-dd').format(expiryDate),
+        DateFormat('yyyy-MM-dd').format(scannedAt),
         status,
       ]);
     }
@@ -42,7 +43,7 @@ class ReportsService {
   }
 
   // Generate and Share PDF
-  Future<void> generateAndSharePDF(List<MedicineBatch> batches) async {
+  Future<void> generateAndSharePDF(List<Map<String, dynamic>> batches) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -64,16 +65,17 @@ class ReportsService {
               // Table
               pw.TableHelper.fromTextArray(
                 context: context,
-                headers: ['Batch No.', 'Expiry Date', 'Qty', 'Status'],
+                headers: ['Batch Name', 'Drug Code', 'Expiry Date', 'Status'],
                 data: batches.map((batch) {
-                  final daysLeft = batch.expiryDate.difference(DateTime.now()).inDays;
+                  final expiryDate = batch['expiry_date'] != null ? DateTime.parse(batch['expiry_date']) : DateTime.now();
+                  final daysLeft = expiryDate.difference(DateTime.now()).inDays;
                   String status = daysLeft <= 90 ? 'Warning' : 'OK';
                   if (daysLeft < 0) status = 'EXPIRED';
 
                   return [
-                    batch.batchNumber,
-                    DateFormat('dd/MM/yyyy').format(batch.expiryDate),
-                    batch.quantity.toString(),
+                    batch['batch_name']?.toString() ?? 'N/A',
+                    batch['drug_code']?.toString() ?? 'N/A',
+                    DateFormat('dd/MM/yyyy').format(expiryDate),
                     status,
                   ];
                 }).toList(),
@@ -84,7 +86,7 @@ class ReportsService {
                 ),
                 cellAlignment: pw.Alignment.centerLeft,
                 cellAlignments: {
-                  2: pw.Alignment.centerRight, // Align Qty to right
+                  2: pw.Alignment.centerRight, // Align Date to right
                 },
               ),
             ],
