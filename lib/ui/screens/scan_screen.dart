@@ -64,6 +64,21 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  Future<Iterable<Map<String, dynamic>>> _searchMedicines(String query) async {
+    if (query.length < 3) return const [];
+    try {
+      final response = await Supabase.instance.client
+          .from('medicines_master')
+          .select('drug_code, generic_name, unit_size')
+          .ilike('generic_name', '%$query%')
+          .limit(10);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('Search error: $e');
+      return const [];
+    }
+  }
+
   void _showResultDialog(DateTime date) {
     // Unfocus any active field BEFORE showing dialog — prevents IME loop
     FocusScope.of(context).unfocus();
@@ -71,7 +86,8 @@ class _ScanScreenState extends State<ScanScreen> {
     final TextEditingController dateController = TextEditingController(
       text: DateFormat('dd/MM/yyyy').format(date),
     );
-    final TextEditingController batchController = TextEditingController();
+    final TextEditingController medicineController = TextEditingController();
+    String? selectedDrugCode;
     bool isSaving = false;
 
     showDialog(
@@ -85,16 +101,60 @@ class _ScanScreenState extends State<ScanScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Batch / Medicine Name:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text('Medicine Name:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              TextField(
-                controller: batchController,
-                autofocus: false, // ← Prevents IME loop
-                decoration: const InputDecoration(
-                  hintText: 'e.g. Paracetamol 500mg',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
+              Autocomplete<Map<String, dynamic>>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  return _searchMedicines(textEditingValue.text);
+                },
+                displayStringForOption: (option) => '${option['generic_name']} (${option['unit_size']})',
+                onSelected: (option) {
+                  selectedDrugCode = option['drug_code'] as String?;
+                  medicineController.text = '${option['generic_name']}';
+                },
+                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                  // Bind text changes to clear selectedDrugCode if edited
+                  controller.addListener(() {
+                    if (medicineController.text != controller.text) {
+                      medicineController.text = controller.text;
+                    }
+                  });
+                  return TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    autofocus: false,
+                    decoration: const InputDecoration(
+                      hintText: 'Search medicine...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  );
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200, maxWidth: 260),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: options.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final option = options.elementAt(index);
+                            return InkWell(
+                              onTap: () => onSelected(option),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Text('${option['generic_name']} (${option['unit_size']})', style: const TextStyle(fontSize: 12)),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               const Text('Expiry Date (एक्सपायरी डेट):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -129,12 +189,12 @@ class _ScanScreenState extends State<ScanScreen> {
                   ? null
                   : () async {
                       FocusScope.of(dialogContext).unfocus();
-                      final batchName = batchController.text.trim();
+                      final batchName = medicineController.text.trim();
                       final dateText = dateController.text.trim();
 
                       if (batchName.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter batch/medicine name.')),
+                          const SnackBar(content: Text('Please select or enter medicine name.')),
                         );
                         return;
                       }
@@ -154,7 +214,9 @@ class _ScanScreenState extends State<ScanScreen> {
 
                       try {
                         await Supabase.instance.client.from('stock_batches').insert({
+                          'user_id': Supabase.instance.client.auth.currentUser!.id,
                           'batch_name': batchName,
+                          'drug_code': selectedDrugCode,
                           'expiry_date': finalDate.toIso8601String(),
                           'scanned_at': DateTime.now().toIso8601String(),
                         });
