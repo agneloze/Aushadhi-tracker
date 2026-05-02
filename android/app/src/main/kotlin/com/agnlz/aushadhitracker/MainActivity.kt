@@ -1,4 +1,4 @@
-package com.example.janaushadhi
+package com.agnlz.aushadhitracker
 
 import io.flutter.embedding.android.FlutterActivity
 
