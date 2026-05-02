@@ -1,11 +1,11 @@
 {
-    "name": "janaushadhi",
-    "short_name": "janaushadhi",
+    "name": "Aushadhi Tracker",
+    "short_name": "Aushadhi",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0054A6",
+    "description": "Jan Aushadhi medicine expiry tracker with FIFO alerts and AI scanning.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
