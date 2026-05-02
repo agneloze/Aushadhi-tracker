@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:universal_html/html.dart' as html;
 import 'package:csv/csv.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -32,6 +36,17 @@ class ReportsService {
     }
 
     String csv = const ListToCsvConverter().convert(rows);
+
+    if (kIsWeb) {
+      final bytes = utf8.encode(csv);
+      final blob = html.Blob([bytes], 'text/csv');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', 'aushadhi_inventory_report.csv')
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      return;
+    }
 
     final directory = await getTemporaryDirectory();
     final path = "${directory.path}/aushadhi_inventory_report.csv";
@@ -95,10 +110,22 @@ class ReportsService {
       ),
     );
 
+    final bytes = await pdf.save();
+
+    if (kIsWeb) {
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', 'aushadhi_inventory_report.pdf')
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      return;
+    }
+
     final directory = await getTemporaryDirectory();
     final path = "${directory.path}/aushadhi_inventory_report.pdf";
     final file = File(path);
-    await file.writeAsBytes(await pdf.save());
+    await file.writeAsBytes(bytes);
 
     // Share the file
     await Share.shareXFiles([XFile(path)], text: 'Jan Aushadhi Inventory PDF Report');
