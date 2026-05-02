@@ -36,6 +36,7 @@ dependencies:
   # AI & Images
   google_generative_ai: ^0.4.7
   image: ^4.5.4
+  universal_html: ^2.2.4
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +49,20 @@ dev_dependencies:
   drift_dev: ^2.14.0
   build_runner: ^2.4.7
 
+  # Launcher Icons
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/logo.png"
+  web:
+    generate: true
+    image_path: "assets/logo.png"
+  windows:
+    generate: true
+    image_path: "assets/logo.png"
+    icon_size: 48
 flutter:
   uses-material-design: true
   assets:
