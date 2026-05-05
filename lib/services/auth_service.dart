@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -39,7 +40,7 @@ class AuthService {
     try {
       await _supabase.auth.signInWithOAuth(
         OAuthProvider.google,
-        // redirectTo is handled automatically by Supabase on Web if configured in Dashboard
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
       );
     } catch (e) {
       rethrow;
